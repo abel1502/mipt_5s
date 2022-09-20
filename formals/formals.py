@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(
 def main():
     args = parser.parse_args()
 
-    print(regex.reconstruct(regex_parser.parse("a(bc)*d")))
+    print(regex.reconstruct(regex_parser.parse("a(bc)*d + (e+f)^5")))
 
     return 0
 

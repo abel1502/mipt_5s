@@ -73,7 +73,7 @@ class Concat(Regex):
         return tuple(self._children)
 
 
-# TODO: Smart Repeat for optimization?
+# TODO: Maybe smart Repeat for optimization?
 
 
 class Star(Regex):
@@ -167,4 +167,7 @@ class ReconstructRegexVisitor(itree.Visitor):
 
 def reconstruct(regex: Regex) -> str:
     return ReconstructRegexVisitor().visit(regex)
+
+
+
 

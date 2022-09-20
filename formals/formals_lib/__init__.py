@@ -1,2 +1,2 @@
-from . import itree, regex, regex_parser
+from . import itree, regex, regex_parser, automata
 
