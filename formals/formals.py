@@ -3,6 +3,8 @@ import typing
 import argparse
 import cmd
 
+from formals_lib import regex
+
 
 parser = argparse.ArgumentParser(
     description="""
@@ -10,5 +12,14 @@ parser = argparse.ArgumentParser(
     """
 )
 
-parser.add_argument()
+# parser.add_argument()
 
+
+def main():
+    args = parser.parse_args()
+
+    return 0
+
+
+if __name__ == "__main__":
+    exit(main())
