@@ -1,6 +1,4 @@
 from __future__ import annotations
-from curses import nonl
-from tkinter import N
 import typing
 import io
 import dataclasses
@@ -128,12 +126,14 @@ class RegexParser:
         return cur.value
     
     def parse(self) -> regex.Regex:
+        self.tokenize()
+        
         self._pos = 0
         
         result: regex.Regex = self.parse_either()
-        
-        if not self.is_eof():
-            raise RegexSyntaxError(f"Unexpected token: {self.cur().token_type.name}")
+
+        self.require_tok(RegexTokenType.eof)
+        assert self.is_eof()
         
         return result
     
@@ -174,6 +174,8 @@ class RegexParser:
                 item = item.repeat(cur.value)
             else:
                 break
+
+            self.next()
         return item
     
     def parse_atomic(self) -> regex.Regex:
@@ -181,9 +183,11 @@ class RegexParser:
         if cur.token_type == RegexTokenType.lpar:
             return self.parse_par_expr()
         if cur.token_type == RegexTokenType.letter:
+            self.next()
             return regex.Letter(cur.value)
         if cur.token_type != RegexTokenType.digit:
             raise RegexSyntaxError(f"Unexpected token: {cur.token_type.name}")
+        self.next()
         if cur.value == 0:
             return regex.Zero()
         if cur.value == 1:
@@ -191,4 +195,11 @@ class RegexParser:
         raise RegexSyntaxError(f"{cur.value} is not a valid digit for regex")
     
     def parse_par_expr(self) -> regex.Regex:
-        pass
+        self.require_tok(RegexTokenType.lpar)
+        result: regex.Regex = self.parse_either()
+        self.require_tok(RegexTokenType.rpar)
+        return result
+
+
+def parse(src: str | io.TextIOBase) -> regex.Regex:
+    return RegexParser(src).parse()

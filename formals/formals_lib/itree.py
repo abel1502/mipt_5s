@@ -1,6 +1,7 @@
 from __future__ import annotations
 import typing
 import abc
+import warnings
 
 
 T = typing.TypeVar("T", bound="ITree")
@@ -13,10 +14,14 @@ class ITree(abc.ABC, typing.Generic[T]):
 
 
 class Visitor(typing.Generic[T]):
+    warn_on_generic: typing.ClassVar[bool] = False
+
     _lookup: typing.ClassVar[typing.Mapping[typing.Type[T], typing.Callable[["Visitor", T]]]]
     
     @staticmethod
     def handler(node_type: typing.Type[T]):
+        assert issubclass(node_type, ITree), "Handlers can only be specified for node types"
+
         #pylint:disable=W0212
         def wrap(method: typing.Callable[["Visitor", T]]) -> typing.Callable[["Visitor", T]]:
             assert callable(method), "Only methods should be decorated with Visitor.handler"
@@ -41,13 +46,20 @@ class Visitor(typing.Generic[T]):
                 assert node_type not in cls._lookup, f"Duplicate handler for {node_type.__name__}"
                 cls._lookup[node_type] = member
     
-    def visit(self, node: T):
+    def __init__(self):
+        pass
+
+    def visit(self, node: T) -> typing.Any:
         for base in type(node).__mro__:
             if base in self._lookup:
                 return self._lookup[base](self, node)
+        
+        if self.warn_on_generic:
+            warnings.warn(f"Handler for {type(node).__qualname__} not specified, defaulting to iterating over children")
+
         return self.generic_visit(node)
     
-    def generic_visit(self, node: T):
+    def generic_visit(self, node: T) -> None:
         for child in node.get_children():
             self.visit(child)
 

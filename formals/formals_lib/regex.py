@@ -1,5 +1,8 @@
 from __future__ import annotations
+from multiprocessing import context
 import typing
+import enum
+import contextlib
 
 from . import itree
 
@@ -91,3 +94,77 @@ class Either(Regex):
     
     def get_children(self) -> typing.Iterable[Regex]:
         return tuple(self._children)
+
+
+class ReconstructRegexVisitor(itree.Visitor):
+    class ParLevel(enum.IntEnum):
+        none = 0
+        either = 1
+        concat = 2
+    
+
+    _par_level: ParLevel
+
+
+    def __init__(self):
+        super().__init__()
+
+        # 0 = no parentheses needed, 1 = need
+        self._par_level = self.ParLevel.none
+    
+    @contextlib.contextmanager
+    def _set_par_level(self, level: ParLevel):
+        old_level: self.ParLevel = self._par_level
+        self._par_level = level
+        yield
+        self._par_level = old_level
+
+    @itree.Visitor.handler(Letter)
+    def visit_letter(self, node: Letter) -> str:
+        return node.letter
+    
+    @itree.Visitor.handler(Zero)
+    def visit_zero(self, node: Letter) -> str:
+        return "0"
+    
+    @itree.Visitor.handler(One)
+    def visit_one(self, node: One) -> str:
+        return "1"
+    
+    @itree.Visitor.handler(Concat)
+    def visit_concat(self, node: Concat) -> str:
+        result: typing.List[str] = []
+
+        with self._set_par_level(self.ParLevel.either):
+            for child in node.get_children():
+                result.append(self.visit(child))
+        
+        result: str = "".join(result)
+        if self._par_level >= self.ParLevel.concat:
+            result = f"({result})"
+        
+        return result
+
+    @itree.Visitor.handler(Star)
+    def visit_star(self, node: Star) -> str:
+        with self._set_par_level(self.ParLevel.concat):
+            return self.visit(node.get_children()[0]) + "*"
+
+    @itree.Visitor.handler(Either)
+    def visit_either(self, node: Either) -> str:
+        result: typing.List[str] = []
+
+        with self._set_par_level(self.ParLevel.none):
+            for child in node.get_children():
+                result.append(self.visit(child))
+        
+        result: str = "+".join(result)
+        if self._par_level >= self.ParLevel.either:
+            result = f"({result})"
+        
+        return result
+    
+
+def reconstruct(regex: Regex) -> str:
+    return ReconstructRegexVisitor().visit(regex)
+

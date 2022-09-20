@@ -3,7 +3,7 @@ import typing
 import argparse
 import cmd
 
-from formals_lib import regex
+from formals_lib import regex, regex_parser
 
 
 parser = argparse.ArgumentParser(
@@ -17,6 +17,8 @@ parser = argparse.ArgumentParser(
 
 def main():
     args = parser.parse_args()
+
+    print(regex.reconstruct(regex_parser.parse("a(bc)*d")))
 
     return 0
 
