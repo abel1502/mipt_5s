@@ -1,6 +1,5 @@
 from __future__ import annotations
 import typing
-import io
 
 from . import itree
 
@@ -92,13 +91,3 @@ class Either(Regex):
     
     def get_children(self) -> typing.Iterable[Regex]:
         return tuple(self._children)
-
-
-class _RegexParser:
-    _src: io.TextIOBase
-    
-    def __init__(self, src: str | io.TextIOBase):
-        if isinstance(src, str):
-            src = io.StringIO(src)
-        
-        self._src = src
