@@ -1,8 +1,12 @@
 from __future__ import annotations
-from re import A
+from hashlib import new
+from re import A, L
 import typing
 import dataclasses
 from collections import deque
+
+
+KeyType = typing.Any
 
 
 @dataclasses.dataclass
@@ -10,6 +14,7 @@ class Node:
     id: int
     out: typing.List["Edge"] = dataclasses.field(default_factory=lambda: [])
     is_term: bool = False
+    key: KeyType | None = None
 
     def get_edges(self, *,
                   label_full:  str | None = None,
@@ -36,22 +41,115 @@ class Edge:
         return len(self.label)
 
 
-@dataclasses.dataclass
 class Automata:
-    alphabet: typing.Container[str]
-    # nodes: typing.List[AutomataNode]
-    # edges: typing.List[AutomataEdge]
-    start: Node
+    alphabet: str
+    _nodes: typing.List[Node]
+    _edges: typing.List[Edge]
+    _node_keys: typing.Dict[KeyType, Node]
+    start: Node  # Attention: start's id isn't always zero!
 
+
+    def __init__(self, alphabet: str):
+        self.alphabet = alphabet
+        self._nodes = []
+        self._edges = []
+        self._node_keys = {}
+        self.start = self.make_node()
+
+    def make_node(self, key=None, term=False) -> Node:
+        """
+        If key is None, i is used by default
+        """
+
+        node = Node(self._next_id(), is_term=term, key=key)
+        
+        self._nodes.append(node)
+
+        self.set_key(node, key)
+
+        return node
+    
+    def set_start(self, new_start: Node | KeyType) -> None:
+        """
+        Changes the start to be new_start
+        """
+
+        if not isinstance(new_start, Node):
+            new_start = self.node(new_start)
+
+        self.start = new_start
+
+    def id_node(self, id: int) -> Node:
+        if id not in range(len(self._nodes)):
+            raise IndexError("Invalid id")
+        return self._nodes[id]
+    
+    def node(self, key: KeyType) -> Node:
+        return self._node_keys[key]
+
+    def link(self, src: Node | KeyType, dst: Node | KeyType, label: str) -> Edge:
+        if not isinstance(src, Node):
+            src = self.node(src)
+        if not isinstance(dst, Node):
+            dst = self.node(dst)
+        
+        edge: Edge = Edge(label, src, dst)
+        self._edges.append(edge)
+        src.out.append(edge)
+        return edge
+    
+    def set_key(self, node: Node | KeyType | None, key: KeyType) -> None:
+        if not isinstance(node, Node):
+            node = self.node(node)
+        
+        if node in self._node_keys.values():
+            for k, v in self._node_keys.items():
+                if v is node:
+                    self._node_keys.pop(k)
+        
+        if key is None:
+            key = node.id
+
+        assert key not in self._node_keys, "Duplicate key detected"
+        self._node_keys[key] = node
+
+    def _next_id(self) -> int:
+        return len(self._nodes)
 
     def get_nodes(self) -> typing.Iterable[Node]:
-        raise NotImplementedError()
+        return self._nodes
 
     def get_edges(self) -> typing.Iterable[Edge]:
-        raise NotImplementedError()
+        return self._edges
     
     def get_terms(self) -> typing.Iterable[Node]:
         return (node for node in self.get_nodes() if node.is_term)
+    
+    def is_deterministic(self) -> bool:
+        raise NotImplementedError()
+    
+    def copy(self) -> Automata:
+        result = Automata(self.alphabet)
+
+        result.start.is_term = self.start.is_term
+        result.start.key = self.start.key
+
+        for node in self.get_nodes():
+            result.make_node(key=node.key, term=node.is_term)
+        
+        for edge in self.get_edges():
+            result.link(result.id_node(edge.src.id), result.id_node(edge.dst.id), edge.label)
+        
+        return result
+
+    def __copy__(self) -> Automata:
+        return self.copy()
+    
+    def __deepcopy__(self) -> Automata:
+        return self.copy()
+    
+    def __len__(self) -> int:
+        return len(self._nodes)
 
 
 class Visitor:
@@ -136,5 +234,7 @@ class Visitor:
         return self._queue.popleft()
 
 
-class Transformer(Visitor):
-    pass
+# TODO: Maybe a Transformer class?
+# class Transformer(Visitor):
+#     pass
+

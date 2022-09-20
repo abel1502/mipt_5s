@@ -96,7 +96,7 @@ class Either(Regex):
         return tuple(self._children)
 
 
-class ReconstructRegexVisitor(itree.Visitor):
+class Reconstructor(itree.Visitor):
     class ParLevel(enum.IntEnum):
         none = 0
         either = 1
@@ -166,7 +166,7 @@ class ReconstructRegexVisitor(itree.Visitor):
     
 
 def reconstruct(regex: Regex) -> str:
-    return ReconstructRegexVisitor().visit(regex)
+    return Reconstructor().visit(regex)
 
 
 
