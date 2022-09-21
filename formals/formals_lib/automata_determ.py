@@ -1,10 +1,7 @@
 from __future__ import annotations
-from symbol import factor
 import typing
-import copy
 import dataclasses
 from collections import deque
-from unittest import result
 
 from .automata import *
 from .automata_ops import *

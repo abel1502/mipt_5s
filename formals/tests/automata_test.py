@@ -11,6 +11,7 @@ import utils
 from formals_lib.automata import *
 from formals_lib.automata_ops import *
 from formals_lib.automata_determ import *
+from formals_lib.regex_automata import *
 
 
 @dataclasses.dataclass(frozen=True)

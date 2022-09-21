@@ -195,7 +195,7 @@ class Automata:
         return len(self._nodes)
 
 
-class Visitor:
+class AutomataVisitor:
     _queue: typing.Deque[typing.Tuple[Edge | None, Node]]
     _seen: typing.Set[Node]
 

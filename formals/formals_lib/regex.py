@@ -112,7 +112,7 @@ class Either(Regex):
         return tuple(self._children)
 
 
-class Reconstructor(itree.Visitor):
+class Reconstructor(itree.TreeVisitor[Regex]):
     class ParLevel(enum.IntEnum):
         none = 0
         either = 1
@@ -125,7 +125,6 @@ class Reconstructor(itree.Visitor):
     def __init__(self):
         super().__init__()
 
-        # 0 = no parentheses needed, 1 = need
         self._par_level = self.ParLevel.none
     
     @contextlib.contextmanager
@@ -135,19 +134,19 @@ class Reconstructor(itree.Visitor):
         yield
         self._par_level = old_level
 
-    @itree.Visitor.handler(Letter)
+    @itree.TreeVisitor.handler(Letter)
     def visit_letter(self, node: Letter) -> str:
         return node.letter
     
-    @itree.Visitor.handler(Zero)
-    def visit_zero(self, node: Letter) -> str:
+    @itree.TreeVisitor.handler(Zero)
+    def visit_zero(self, node: Zero) -> str:
         return "0"
     
-    @itree.Visitor.handler(One)
+    @itree.TreeVisitor.handler(One)
     def visit_one(self, node: One) -> str:
         return "1"
     
-    @itree.Visitor.handler(Concat)
+    @itree.TreeVisitor.handler(Concat)
     def visit_concat(self, node: Concat) -> str:
         result: typing.List[str] = []
 
@@ -161,12 +160,12 @@ class Reconstructor(itree.Visitor):
         
         return result
 
-    @itree.Visitor.handler(Star)
+    @itree.TreeVisitor.handler(Star)
     def visit_star(self, node: Star) -> str:
         with self._set_par_level(self.ParLevel.concat):
             return self.visit(node.get_children()[0]) + "*"
 
-    @itree.Visitor.handler(Either)
+    @itree.TreeVisitor.handler(Either)
     def visit_either(self, node: Either) -> str:
         result: typing.List[str] = []
 

@@ -17,29 +17,10 @@ parser = argparse.ArgumentParser(
 # parser.add_argument()
 
 
-def test_regex():
-    data = "a(bc)*d"  # + " + (e+f)^5"
-    print(regex.reconstruct(regex_parser.parse()))
-
-
-def test_automata():
-    aut = automata.Automata("abcd")
-    q0 = aut.start
-    q1 = aut.make_node()
-    q2 = aut.make_node(term=True)
-
-    aut.link(q0, q1, "a")
-    aut.link(q1, q1, "bc")
-    aut.link(q1, q2, "d")
-
-    automata_dot.dump(aut, pathlib.Path("~/Desktop/automata.svg").expanduser())
-
-
 def main():
     args = parser.parse_args()
 
-    # test_regex()
-    test_automata()
+    # TODO: Finish
 
     return 0
 

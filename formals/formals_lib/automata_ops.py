@@ -1,6 +1,5 @@
 from __future__ import annotations
 import typing
-import copy
 
 from .automata import *
 
@@ -177,7 +176,7 @@ class AutomataTrimmer(BaseAutomataTransform):
     def apply(self) -> Automata:
         result = self.raw_copy()
 
-        vis = Visitor()
+        vis = AutomataVisitor()
         vis.visit(result)
 
         to_remove: typing.List[Node] = []

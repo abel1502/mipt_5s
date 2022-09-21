@@ -13,17 +13,17 @@ class ITree(abc.ABC, typing.Generic[T]):
         pass
 
 
-class Visitor(typing.Generic[T]):
+class TreeVisitor(typing.Generic[T]):
     warn_on_generic: typing.ClassVar[bool] = False
 
-    _lookup: typing.ClassVar[typing.Mapping[typing.Type[T], typing.Callable[["Visitor", T]]]]
+    _lookup: typing.ClassVar[typing.Mapping[typing.Type[T], typing.Callable[["TreeVisitor", T]]]]
     
     @staticmethod
     def handler(node_type: typing.Type[T]):
         assert issubclass(node_type, ITree), "Handlers can only be specified for node types"
 
         #pylint:disable=W0212
-        def wrap(method: typing.Callable[["Visitor", T]]) -> typing.Callable[["Visitor", T]]:
+        def wrap(method: typing.Callable[["TreeVisitor", T]]) -> typing.Callable[["TreeVisitor", T]]:
             assert callable(method), "Only methods should be decorated with Visitor.handler"
             if not hasattr(method, "_visits_"):
                 method._visits_ = set()
