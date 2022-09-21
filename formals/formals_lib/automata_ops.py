@@ -181,3 +181,27 @@ class AutomataTrimmer(BaseAutomataTransform):
                 to_remove.append(node)
         
         self.aut.remove_nodes(to_remove)
+
+
+def concat(aut1: Automata, aut2: Automata) -> Automata:
+    return AutomataConcat(aut1, aut2).apply()
+
+
+def join(aut1: Automata, aut2: Automata) -> Automata:
+    return AutomataJoin(aut1, aut2).apply()
+
+
+def intersect(aut1: Automata, aut2: Automata) -> Automata:
+    return AutomataIntersect(aut1, aut2).apply()
+
+
+def star(aut: Automata) -> Automata:
+    return AutomataStar(aut).apply()
+
+
+def pow_plus(aut: Automata) -> Automata:
+    return AutomataPlusPow(aut).apply()
+
+
+def trim(aut: Automata) -> Automata:
+    return AutomataTrimmer(aut).apply()

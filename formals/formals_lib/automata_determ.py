@@ -205,3 +205,19 @@ class MakeFullDFA(MakeDeterministic):
                 result.link(node, end, letter)
         
         return result
+
+
+def make_edges_01(aut: Automata) -> Automata:
+    return MakeEdges01(aut).apply()
+
+
+def make_edges_1(aut: Automata) -> Automata:
+    return MakeEdges1(aut).apply()
+
+
+def make_dfa(aut: Automata) -> Automata:
+    return MakeDeterministic(aut).apply()
+
+
+def make_full_dfa(aut: Automata) -> Automata:
+    return MakeFullDFA(aut).apply()
