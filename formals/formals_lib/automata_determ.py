@@ -1,7 +1,10 @@
 from __future__ import annotations
+from symbol import factor
 import typing
 import copy
+import dataclasses
 from collections import deque, frozenset
+from unittest import result
 
 from .automata import *
 from .automata_ops import *
@@ -123,6 +126,15 @@ class UnifyTerm(BaseAutomataTransform):
 
 
 class MakeDeterministic(BaseAutomataTransform):
+    @dataclasses.dataclass
+    class _NodeInfo:
+        members: typing.Set[Node] = dataclasses.field(default_factory=set)
+        is_term: bool = False
+
+        def frozen_members(self) -> typing.FrozenSet[Node]:
+            return frozenset(self.members)
+
+
     def apply(self) -> Automata:
         # We'll use that for our guideline, not the result
         self.aut = MakeEdges1(self.aut).apply()
@@ -131,12 +143,44 @@ class MakeDeterministic(BaseAutomataTransform):
         result = Automata(self.aut.alphabet)
 
         result.change_key(result.start, frozenset([self.aut.start.key]))
-        
-        self.bfs(result)
+
+        return self.bfs(result)
+    
+    def bfs(self, result: Automata) -> Automata:
+        queue: typing.Deque[Node] = deque()
+        queue.append(result.start)
+
+        while queue:
+            node: Node = queue.popleft()
+
+            edges = self.gather_edges(node)
+
+            for label, dst_info in edges:
+                label: str
+                dst_info: self._NodeInfo
+
+                dst_key = dst_info.frozen_members()
+
+                dst: Node
+
+                if dst_key not in result:
+                    dst = result.make_node(dst_key, term=dst_info.is_term)
+                else:
+                    dst = result.node(dst_key)
+                
+                result.link(node, label, dst)
+
+                queue.append(dst)
 
         return result
     
-    def bfs(self, result: Automata) -> Automata:
-        # TODO: Finish!
+    def gather_edges(self, node: Node) -> typing.Dict[str, _NodeInfo]:
+        result: typing.Dict[str, self._NodeInfo]
+
+        for subkey in node.key:
+            is_term: bool = False
+            for edge in self.aut[subkey].out:
+                is_term = is_term or edge.dst.is_term
+                result.setdefault(edge.label, self._NodeInfo()).members.add(edge.dst.key)
 
         return result
