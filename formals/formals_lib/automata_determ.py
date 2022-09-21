@@ -15,7 +15,7 @@ class MakeEdges01(BaseAutomataTransform):
         result: Automata = self.raw_copy()
         
         # Copying to avoid messing up the iteration
-        for edge in list(Automata.get_edges()):
+        for edge in list(result.get_edges()):
             edge: Edge
 
             self.split_edge(result, edge)
@@ -24,17 +24,18 @@ class MakeEdges01(BaseAutomataTransform):
     
     @staticmethod
     def split_edge(aut: Automata, edge: Edge) -> None:
-        if len(edge.label) <= 1:
+        if len(edge) <= 1:
             return
         
         aut.unlink(edge)
         
         prev: Node = edge.src
         cur: Node
-        for i in range(len(edge.label) - 1):
+        for i in range(len(edge) - 1):
             cur = aut.make_node()
             aut.link(prev, cur, edge.label[i])
             prev = cur
+        aut.link(prev, edge.dst, edge.label[-1])
 
 
 class MakeEdges1(MakeEdges01):
@@ -52,7 +53,7 @@ class MakeEdges1(MakeEdges01):
         for edge in list(result.get_edges()):
             edge: Edge
 
-            if len(edge.label) > 0:
+            if len(edge) > 0:
                 continue
             
             result.unlink(edge)
@@ -64,6 +65,8 @@ class MakeEdges1(MakeEdges01):
         reverse_edges: typing.Dict[Node, typing.List[Node]] = {}
 
         for edge in aut.get_edges():
+            if len(edge) > 0:
+                continue
             reverse_edges.setdefault(edge.dst, []).append(edge.src)
         
         queue: typing.Deque[Node] = deque()
@@ -95,16 +98,16 @@ class MakeEdges1(MakeEdges01):
                 continue
             epsilon_reachable.add(node)
 
-            for child in node.out:
-                if len(child.label) > 0:
+            for edge in node.out:
+                if len(edge) > 0:
                     continue
-                queue.append(child.dst)
+                queue.append(edge.dst)
         
         epsilon_reachable.remove(start)
 
         for node in epsilon_reachable:
             for edge in node.out:
-                if len(edge.label) == 0:
+                if len(edge) == 0:
                     continue
                 aut.link(start, edge.dst, edge.label)
 
@@ -146,6 +149,7 @@ class MakeDeterministic(BaseAutomataTransform):
         result = Automata(self.aut.alphabet)
 
         result.change_key(result.start, frozenset([self.aut.start.key]))
+        result.start.is_term = self.aut.start.is_term
 
         return self.bfs(result)
     
@@ -158,7 +162,7 @@ class MakeDeterministic(BaseAutomataTransform):
 
             edges = self.gather_edges(node)
 
-            for label, dst_info in edges:
+            for label, dst_info in edges.items():
                 label: str
                 dst_info: self._NodeInfo
 
@@ -167,24 +171,23 @@ class MakeDeterministic(BaseAutomataTransform):
                 dst: Node
 
                 if dst_key not in result:
-                    dst = result.make_node(dst_key, term=dst_info.is_term)
+                    dst = result.make_node(key=dst_key, term=dst_info.is_term)
+                    queue.append(dst)
                 else:
                     dst = result.node(dst_key)
                 
-                result.link(node, label, dst)
-
-                queue.append(dst)
+                result.link(node, dst, label)
 
         return result
     
     def gather_edges(self, node: Node) -> typing.Dict[str, _NodeInfo]:
-        result: typing.Dict[str, self._NodeInfo]
+        result: typing.Dict[str, self._NodeInfo] = {}
 
         for subkey in node.key:
-            is_term: bool = False
             for edge in self.aut[subkey].out:
-                is_term = is_term or edge.dst.is_term
-                result.setdefault(edge.label, self._NodeInfo()).members.add(edge.dst.key)
+                cur_node_info: self._NodeInfo = result.setdefault(edge.label, self._NodeInfo())
+                cur_node_info.members.add(edge.dst.key)
+                cur_node_info.is_term = cur_node_info.is_term or edge.dst.is_term
 
         return result
 
@@ -213,6 +216,10 @@ def make_edges_01(aut: Automata) -> Automata:
 
 def make_edges_1(aut: Automata) -> Automata:
     return MakeEdges1(aut).apply()
+
+
+def unify_term(aut: Automata) -> Automata:
+    return UnifyTerm(aut).apply()
 
 
 def make_dfa(aut: Automata) -> Automata:

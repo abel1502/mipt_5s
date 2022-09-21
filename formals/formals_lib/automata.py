@@ -1,4 +1,5 @@
 from __future__ import annotations
+from gc import unfreeze
 from hashlib import new
 from re import A, L
 import typing
@@ -27,10 +28,15 @@ class Node:
         raise NotImplementedError()
     
     def is_deterministic(self) -> bool:
-        raise NotImplementedError()
+        return all(len(e) == 1 for e in self.out)
+    
+    def __hash__(self) -> int:
+        # It's certainly fine here, since we never consider nodes 'equal'
+        return id(self)
 
 
-@dataclasses.dataclass
+# TODO: ?
+@dataclasses.dataclass(frozen=True)
 class Edge:
     label: str
     src: "Node"
@@ -44,25 +50,28 @@ class Automata:
     alphabet: str
     _nodes: typing.Set[Node]
     _node_lookup: typing.Dict[KeyType, Node]
+    _next_id: int
     _edges: typing.Set[Edge]
     start: Node  # Attention: start's id isn't always zero!
-    _next_id: int
 
 
     def __init__(self, alphabet: str):
         self.alphabet = alphabet
         self._nodes = set()
         self._node_lookup = {}
+        self._next_id = 0
         self._edges = set()
         self.start = self.make_node()
-        self._next_id = 0
 
     def make_node(self, key=None, term=False) -> Node:
         """
         If key is None, i is used by default
         """
 
-        node = Node(key or self._get_next_id(), is_term=term)
+        if key is None:
+            key = self._get_next_id()
+
+        node = Node(key, is_term=term)
         
         self._nodes.add(node)
 
@@ -129,16 +138,18 @@ class Automata:
         if not isinstance(node, Node):
             node = self.node(node)
         
-        if node in self._node_lookup.values():
-            for k, v in self._node_lookup.items():
-                if v is node:
-                    self._node_lookup.pop(k)
+        # Copying to avoid messing up the iteration
+        for k, v in list(self._node_lookup.items()):
+            if v is node:
+                self._node_lookup.pop(k)
         
         if key is None:
-            key = node.id
+            key = self._get_next_id()
 
         assert key not in self._node_lookup, "Duplicate key detected"
         self._node_lookup[key] = node
+
+        node.key = key
 
     def _get_next_id(self) -> int:
         result: int = self._next_id
@@ -155,16 +166,18 @@ class Automata:
         return (node for node in self.get_nodes() if node.is_term)
     
     def is_deterministic(self) -> bool:
-        raise NotImplementedError()
+        return all(len(e) == 1 for e in self.get_edges())
     
     def copy(self) -> Automata:
         result = Automata(self.alphabet)
-        
+
         result._next_id = self._next_id
         result.start.is_term = self.start.is_term
         result.start.key = self.start.key
 
         for node in self.get_nodes():
+            if node is self.start:
+                continue
             result.make_node(key=node.key, term=node.is_term)
         
         for edge in self.get_edges():
@@ -239,7 +252,7 @@ class Visitor:
 
         if len(args) == 2:
             edge, node = args
-            assert isinstance(edge, (Edge, None))
+            assert isinstance(edge, (Edge, type(None)))
             assert isinstance(node, Node)
             assert edge is None or edge.dst is node, "Invalid edge/node pair"
 
@@ -251,7 +264,7 @@ class Visitor:
         if isinstance(args[0], Edge):
             edge = args[0]
 
-            self._queue.append((edge, edge.out))
+            self._queue.append((edge, edge.dst))
             return
         
         if isinstance(args[0], Node):

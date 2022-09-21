@@ -3,7 +3,7 @@ import typing
 import unittest
 
 import utils
-from formals_lib import itree, regex, regex_parser
+from formals_lib import regex, regex_parser
 
 
 class RegexTest(unittest.TestCase):

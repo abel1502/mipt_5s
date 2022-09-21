@@ -170,17 +170,24 @@ class AutomataPlusPow(BaseAutomataTransform):
         return result
 
 
+# TODO: AutomataComplement
+
+
 class AutomataTrimmer(BaseAutomataTransform):
     def apply(self) -> Automata:
+        result = self.raw_copy()
+
         vis = Visitor()
-        vis.visit(self.aut)
+        vis.visit(result)
 
         to_remove: typing.List[Node] = []
-        for node in self.aut.get_nodes():
+        for node in result.get_nodes():
             if not vis.was_seen(node):
                 to_remove.append(node)
         
-        self.aut.remove_nodes(to_remove)
+        result.remove_nodes(to_remove)
+
+        return result
 
 
 def concat(aut1: Automata, aut2: Automata) -> Automata:

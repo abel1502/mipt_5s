@@ -8,14 +8,16 @@ from .automata import *
 
 class AutomataDotDumper:
     _graph: dot.Dot
+    _key_repr: typing.Callable[[typing.Any], str]
 
-    def __init__(self, name="Automata", **kwargs):
+    def __init__(self, name="Automata", key_repr: typing.Callable[[typing.Any], str] = str, **kwargs):
         self._graph = dot.Dot(
             name,
             # rankdir="TD",
             # splines="spline",
             **kwargs,
         )
+        self._key_repr = key_repr
     
     def process(self, aut: Automata) -> None:
         self._add_start_edge(aut.start)
@@ -35,7 +37,7 @@ class AutomataDotDumper:
 
         return dot.Node(
             name,
-            label=f"{node.key}",
+            label=self._key_repr(node.key),
             shape="doublecircle" if node.is_term else "circle",
             color="black",
             fontcolor="black",
@@ -47,7 +49,7 @@ class AutomataDotDumper:
         return dot.Edge(
             self.dot_node_name(edge.src),
             self.dot_node_name(edge.dst),
-            label=edge.label,
+            label=edge.label or "<&epsilon;>",
         )
     
     def _add_node(self, node: dot.Node) -> None:
@@ -68,7 +70,7 @@ class AutomataDotDumper:
         )
 
 
-def dump(aut: Automata, file: pathlib.Path | str, fmt="svg", **kwargs):
-    dumper = AutomataDotDumper()
+def dump(aut: Automata, file: pathlib.Path | str, fmt="svg", key_repr: typing.Callable[[typing.Any], str] = str, **kwargs):
+    dumper = AutomataDotDumper(key_repr=key_repr)
     dumper.process(aut)
     dumper.render_graph(file, fmt=fmt, **kwargs)
