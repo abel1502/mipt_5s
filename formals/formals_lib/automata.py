@@ -11,10 +11,9 @@ KeyType = typing.Any
 
 @dataclasses.dataclass
 class Node:
-    id: int
-    out: typing.List["Edge"] = dataclasses.field(default_factory=lambda: [])
+    key: KeyType
+    out: typing.Set["Edge"] = dataclasses.field(default_factory=lambda: set())
     is_term: bool = False
-    key: KeyType | None = None
 
     def get_edges(self, *,
                   label_full:  str | None = None,
@@ -43,29 +42,31 @@ class Edge:
 
 class Automata:
     alphabet: str
-    _nodes: typing.List[Node]
-    _edges: typing.List[Edge]
-    _node_keys: typing.Dict[KeyType, Node]
+    _nodes: typing.Set[Node]
+    _node_lookup: typing.Dict[KeyType, Node]
+    _edges: typing.Set[Edge]
     start: Node  # Attention: start's id isn't always zero!
+    _next_id: int
 
 
     def __init__(self, alphabet: str):
         self.alphabet = alphabet
-        self._nodes = []
-        self._edges = []
-        self._node_keys = {}
+        self._nodes = set()
+        self._node_lookup = {}
+        self._edges = set()
         self.start = self.make_node()
+        self._next_id = 0
 
     def make_node(self, key=None, term=False) -> Node:
         """
         If key is None, i is used by default
         """
 
-        node = Node(self._next_id(), is_term=term, key=key)
+        node = Node(key or self._get_next_id(), is_term=term)
         
-        self._nodes.append(node)
+        self._nodes.add(node)
 
-        self.set_key(node, key)
+        self.change_key(node, key)
 
         return node
     
@@ -78,14 +79,15 @@ class Automata:
             new_start = self.node(new_start)
 
         self.start = new_start
-
-    def id_node(self, id: int) -> Node:
-        if id not in range(len(self._nodes)):
-            raise IndexError("Invalid id")
-        return self._nodes[id]
     
     def node(self, key: KeyType) -> Node:
-        return self._node_keys[key]
+        return self._node_lookup[key]
+    
+    def __getitem__(self, key: KeyType) -> Node:
+        return self.node(key)
+    
+    def __contains__(self, key: KeyType) -> Node:
+        return key in self._node_lookup
 
     def link(self, src: Node | KeyType, dst: Node | KeyType, label: str) -> Edge:
         if not isinstance(src, Node):
@@ -94,27 +96,54 @@ class Automata:
             dst = self.node(dst)
         
         edge: Edge = Edge(label, src, dst)
-        self._edges.append(edge)
-        src.out.append(edge)
+        self._edges.add(edge)
+        src.out.add(edge)
         return edge
     
-    def set_key(self, node: Node | KeyType | None, key: KeyType) -> None:
+    def unlink(self, edge: Edge) -> Edge:
+        assert edge in self.get_edges()
+
+        self._edges.remove(edge)
+
+        edge.src.out.remove(edge)
+
+        return edge
+    
+    def remove_node(self, node: Node) -> Node:
+        self.remove_nodes([node])
+        return Node
+    
+    def remove_nodes(self, nodes: typing.Iterable[Node]) -> None:
+        nodes: typing.Set[Node] = set(nodes)
+
+        for node in nodes:
+            assert node in self._nodes
+            self._nodes.remove(node)
+
+        # Copying to avoid messing up the iteration
+        for edge in list(self.get_edges()):
+            if edge.src in nodes or edge.dst in nodes:
+                self.unlink(edge)
+    
+    def change_key(self, node: Node | KeyType | None, key: KeyType) -> None:
         if not isinstance(node, Node):
             node = self.node(node)
         
-        if node in self._node_keys.values():
-            for k, v in self._node_keys.items():
+        if node in self._node_lookup.values():
+            for k, v in self._node_lookup.items():
                 if v is node:
-                    self._node_keys.pop(k)
+                    self._node_lookup.pop(k)
         
         if key is None:
             key = node.id
 
-        assert key not in self._node_keys, "Duplicate key detected"
-        self._node_keys[key] = node
+        assert key not in self._node_lookup, "Duplicate key detected"
+        self._node_lookup[key] = node
 
-    def _next_id(self) -> int:
-        return len(self._nodes)
+    def _get_next_id(self) -> int:
+        result: int = self._next_id
+        self._next_id += 1
+        return result
 
     def get_nodes(self) -> typing.Iterable[Node]:
         return self._nodes
@@ -130,7 +159,8 @@ class Automata:
     
     def copy(self) -> Automata:
         result = Automata(self.alphabet)
-
+        
+        result._next_id = self._next_id
         result.start.is_term = self.start.is_term
         result.start.key = self.start.key
 
@@ -138,7 +168,7 @@ class Automata:
             result.make_node(key=node.key, term=node.is_term)
         
         for edge in self.get_edges():
-            result.link(result.id_node(edge.src.id), result.id_node(edge.dst.id), edge.label)
+            result.link(edge.src.key, edge.dst.key, edge.label)
         
         return result
 
@@ -164,8 +194,11 @@ class Visitor:
         self._queue = deque()
         self._seen = set()
 
-    def visit(self, automata: Automata) -> None:
-        self.enqueue(None, automata.start)
+    def visit(self, automata: Automata, start: Node | None = None) -> None:
+        if start is None:
+            start = automata.start
+
+        self.enqueue(None, start)
 
         while self._queue:
             edge, node = self._queue.popleft()

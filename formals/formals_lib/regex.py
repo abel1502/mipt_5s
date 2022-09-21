@@ -86,6 +86,9 @@ class Star(Regex):
         return (self._child,)
 
 
+# TODO: Plus (as power)?
+
+
 class Either(Regex):
     _children: typing.List[Regex]
     

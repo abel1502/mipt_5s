@@ -28,7 +28,7 @@ class AutomataDotDumper:
     
     @staticmethod
     def dot_node_name(node: Node) -> str:
-        return f"q{node.id}"
+        return f"q{node.key}"
     
     def _make_dot_node(self, node: Node, start: bool = False) -> dot.Node:
         name: str = self.dot_node_name(node)
