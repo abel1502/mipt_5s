@@ -39,6 +39,16 @@ class Regex(itree.ITree["Regex"]):
         if isinstance(power, int):
             return self.repeat(power)
         return NotImplemented
+    
+    def __eq__(self, other) -> bool:
+        if type(self) != type(other):
+            return False
+        
+        for child1, child2 in zip(self.get_children(), other.get_children()):
+            if child1 != child2:
+                return False
+        
+        return True
 
 
 class Letter(Regex):
@@ -51,6 +61,9 @@ class Letter(Regex):
     
     def get_children(self) -> typing.Iterable[Regex]:
         return ()
+    
+    def __eq__(self, other) -> bool:
+        return super().__eq__(other) and self.letter == other.letter
 
 
 class Zero(Regex):

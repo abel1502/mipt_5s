@@ -3,7 +3,7 @@ from symbol import factor
 import typing
 import copy
 import dataclasses
-from collections import deque, frozenset
+from collections import deque
 from unittest import result
 
 from .automata import *
