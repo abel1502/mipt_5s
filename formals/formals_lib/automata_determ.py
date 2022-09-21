@@ -133,9 +133,12 @@ class MakeDeterministic(BaseAutomataTransform):
 
         def frozen_members(self) -> typing.FrozenSet[Node]:
             return frozenset(self.members)
-
+    
 
     def apply(self) -> Automata:
+        if self.aut.is_deterministic():
+            return self.aut.copy()  # TODO: Maybe not copy?
+
         # We'll use that for our guideline, not the result
         self.aut = MakeEdges1(self.aut).apply()
         self.aut = AutomataTrimmer(self.aut).apply()
@@ -183,4 +186,22 @@ class MakeDeterministic(BaseAutomataTransform):
                 is_term = is_term or edge.dst.is_term
                 result.setdefault(edge.label, self._NodeInfo()).members.add(edge.dst.key)
 
+        return result
+
+
+class MakeFullDFA(MakeDeterministic):
+    def apply(self) -> Automata:
+        result: Automata = super().apply()
+
+        end: Node = result.make_node()
+
+        for node in result.get_nodes():
+            missing_alphabet: typing.Set[str] = set(result.alphabet)
+
+            for edge in node.out:
+                missing_alphabet.discard(edge.label)
+            
+            for letter in missing_alphabet:
+                result.link(node, end, letter)
+        
         return result
