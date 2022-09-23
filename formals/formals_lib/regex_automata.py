@@ -8,7 +8,7 @@ from .automata import *
 from .automata_ops import *
 from .regex import *
 from .itree import TreeVisitor
-from .automata_determ import make_edges_1
+# from .automata_determ import make_edges_1
 
 
 class RegexToAutomataConverter(TreeVisitor[Regex]):
