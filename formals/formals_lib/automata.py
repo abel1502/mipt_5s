@@ -115,6 +115,10 @@ class Automata:
 
         return edge
     
+    def unlink_many(self, edges: typing.Iterable[Edge]) -> None:
+        for edge in edges:
+            self.unlink(edge)
+    
     def remove_node(self, node: Node) -> Node:
         self.remove_nodes([node])
         return Node
