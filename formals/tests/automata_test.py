@@ -85,9 +85,9 @@ class AutomataTest(unittest.TestCase):
                          wordlist: typing.Iterable[str] = (),
                          rand_wl_size: int = 10) -> None:
         if isinstance(regex, str):
-                regex = parse(regex)
+            regex = parse(regex)
         
-        with self.subTest(f"Regex correctness: '{reconstruct(regex)}'"):
+        with self.subTest(f"Regex equivalence: '{reconstruct(regex)}'"):
             wordlist: typing.List[str] = list(wordlist)
             
             wordlist.extend(self.random_wordlist(
@@ -293,20 +293,21 @@ class AutomataTest(unittest.TestCase):
             "aaab", "abab", "bbba", "abba", "ac", "ca",
         )
         
-        regexes: typing.Final[typing.Tuple[Regex | str, ...]] = (
+        regexes: typing.Final[typing.Tuple[Regex, ...]] = (
             "0", "1", "a", "ab", "a+b", "a*", "(a)", "(ab)", "(a+b)",
             "(a)*", "(a*)", "(a + b) c", "(a + b)^3", "(a + b)*",
             "a(b*a)^2*",
         )
         
         for regex in regexes:
-            aut = regex_to_automata(regex)
-            regex_2 = 
-            
-            self.assertCorrectR2A(regex, wordlist=common_wordlist)
-            self.assertCorrectA2R(regex_to_automata(regex))
-        
-        pass
+            with self.subTest("Regex <-> automata", regex=regex):
+                regex = parse(regex)
+                
+                aut = regex_to_automata(regex)
+                regex_2 = automata_to_regex(aut)
+                
+                self.assertEquivRegex(regex,   aut, wordlist=common_wordlist, rand_wl_size=25)
+                self.assertEquivRegex(regex_2, aut, wordlist=common_wordlist, rand_wl_size=25)
     
     def test_regex_2(self):
         pass  # TODO: Finish!!!!
