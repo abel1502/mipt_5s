@@ -2,7 +2,6 @@ from __future__ import annotations
 import typing
 import argparse
 import cmd
-import dataclasses
 import pathlib
 from collections import UserDict
 import itertools
@@ -253,78 +252,6 @@ def solve_test_1_4(output_dir: pathlib.Path):
     dump_regex(re, output_dir, ("test", 1, 4))
 
 
-class SuffixCounterVisitor(formals.TreeVisitor[formals.Regex]):
-    warn_on_generic: typing.ClassVar[bool] = True
-    
-    _target_letter: str
-    
-    
-    @dataclasses.dataclass
-    class Result:
-        # The longest an x-suffix can be
-        # None means infinity
-        best_suff_len: int | None
-        possibly_full: bool
-    
-    
-    def __init__(self, target_letter: str):
-        super().__init__()
-        
-        assert len(target_letter) == 1
-        
-        self._target_letter = target_letter
-    
-    def apply(self, node: formals.Regex, target_k: int) -> bool:
-        result_len: int | None = self.visit(node).best_suff_len
-        
-        return result_len is None or result_len >= target_k 
-    
-    @formals.TreeVisitor.handler(formals.Letter)
-    def visit_letter(self, node: formals.Letter) -> Result:
-        return node.letter
-    
-    @formals.TreeVisitor.handler(formals.Zero)
-    def visit_zero(self, node: formals.Zero) -> Result:
-        return "0"
-    
-    @formals.TreeVisitor.handler(formals.One)
-    def visit_one(self, node: formals.One) -> Result:
-        return "1"
-    
-    @formals.TreeVisitor.handler(formals.Concat)
-    def visit_concat(self, node: formals.Concat) -> Result:
-        result: typing.List[str] = []
-
-        with self._set_par_level(self.ParLevel.either):
-            for child in node.get_children():
-                result.append(self.visit(child))
-        
-        result: str = "".join(result)
-        if self._par_level >= self.ParLevel.concat:
-            result = f"({result})"
-        
-        return result
-
-    @formals.TreeVisitor.handler(formals.Star)
-    def visit_star(self, node: formals.Star) -> Result:
-        with self._set_par_level(self.ParLevel.concat):
-            return self.visit(node.get_children()[0]) + "*"
-
-    @formals.TreeVisitor.handler(formals.Either)
-    def visit_either(self, node: formals.Either) -> Result:
-        result: typing.List[str] = []
-
-        with self._set_par_level(self.ParLevel.none):
-            for child in node.get_children():
-                result.append(self.visit(child))
-        
-        result: str = "+".join(result)
-        if self._par_level >= self.ParLevel.either:
-            result = f"({result})"
-        
-        return result
-
-
 def solve_task_6_5():
     print("Task 6.5 - interactive solution")
     
@@ -335,12 +262,11 @@ def solve_task_6_5():
     x: str
     k: int
     
-    assert len(x) == 1, "x must be a single letter"
-    assert k >= 0, "k must be non-negative"
-    
     regex: formals.Regex = formals.parse_suff_regex(alpha)
     
-    pass  # TODO
+    result: bool = formals.regex_has_suffix(regex, x, k)
+    
+    print("YES" if result else "NO")
 
 
 def main():
